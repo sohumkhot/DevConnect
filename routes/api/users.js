@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 const gravatar = require('gravatar');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const config = require('config');
 const { check, validationResult } = require('express-validator/check');
 
 // Import User model
 const User = require('../../models/User');
 
-// @route   GETapi/users
+// @route   GET api/users
 // @desc    Test route
 // @access  Public
 router.post(
@@ -64,7 +66,30 @@ router.post(
       // Save the user to MongoDB, returns a promise
       await user.save();
 
-      res.send('User registered');
+      // Create payload for jwt
+      // Here id is the ObjectId associated with the MongoDB entry
+      payload = {
+        user: {
+          id: user.id,
+        },
+      };
+
+      // Sign using jwt.sign for returning a token which will be used for auth in headers in the further requests
+      jwt.sign(
+        // Payload created above
+        payload,
+        // jwtSecret in default.json
+        config.get('jwtSecret'),
+        // options with expiresIn timeout to 3600s/1h
+        {
+          expiresIn: 360000,
+        },
+        // Callback for sending token as a response if no error thrown
+        (err, token) => {
+          if (err) throw err;
+          res.json({ token });
+        }
+      );
     } catch (err) {
       res.status(500).send('Server Error');
     }
